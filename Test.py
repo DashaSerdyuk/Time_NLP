@@ -7,8 +7,19 @@
 # @Changed : tianyuningmou
 
 from TimeNormalizer import TimeNormalizer # 引入包
+import json
 
 tn = TimeNormalizer()
+
+res = tn.parse(target=u'让我们在下午5点采摘披萨，但是您会选择什么呢：10月15日还是11月18日？') # target为待分析语句，timeBase为基准时间默认是当前时间
+print(res)
+
+res = tn.parse(target=u'下午5点')  # target为待分析语句，timeBase为基准时间默认是当前时间
+print(res)
+print()
+
+res = tn.parse(target=u'10月15')  # target为待分析语句，timeBase为基准时间默认是当前时间
+print(res)
 
 res = tn.parse(target=u'晚上8点到上午10点之间') # target为待分析语句，timeBase为基准时间默认是当前时间
 print(res)
@@ -37,10 +48,67 @@ print(res)
 res = tn.parse(target=u'7百')
 print(res)
 
-res = tn.parse(target=u'7千')
+res = tn.parse(target=u'7千 7点4')
 print(res)
 
-#
+
+def get_raw_chinese_time_entities(document):
+    try:
+        return json.loads(tn.parse(target=document))
+    except:
+        return []
+
+
+def parse_chinese_numbers(document):
+    raw_res = get_raw_chinese_time_entities(document)
+    if 'error' in raw_res or 'entities' not in raw_res or len(raw_res) == 0:
+        return []
+    entities = []
+    for raw_entity in raw_res['entities']:
+        start = document.find(raw_entity['token'])
+        end = start + len(raw_entity['token']) - 1
+        add_info = build_additional_info(raw_entity['time'])
+        entity = {'name':'ch.time', 'start_pos': start, 'end_pos': end,
+                                 'text': raw_entity['token'], 'value': raw_entity['time'],
+                                 'additional_info': add_info}
+        entities.append(entity)
+    return entities
+
+
+DT_FORMAT = '%Y-%m-%d %H:%M:%S'
+from datetime import datetime
+
+
+def build_additional_info(str_date):
+    try:
+        dt = datetime.strptime(str_date, DT_FORMAT)
+    except ValueError as e:
+        return dict()
+
+    weekday = python_weekday_to_java_weekday(dt.weekday())
+    return {
+        'year': dt.year,
+        'month': dt.month,  # january -> 1, .., december -> 12
+        'day': dt.day,
+        'dayOfWeek': weekday,
+        'hour': dt.hour,
+        'minute': dt.minute,
+        'second': dt.second,
+        'timestamp': int(dt.timestamp()) * 1000
+    }
+
+
+def python_weekday_to_java_weekday(weekday):
+    """
+    |        | Sun | Mon | Tue | Wed | Thu | Fri | Sat |
+    |--------+-----+-----+-----+-----+-----+-----+-----|
+    | python |   6 |   0 |   1 |   2 |   3 |   4 |   5 |
+    | java   |   1 |   2 |   3 |   4 |   5 |   6 |   7 |
+    """
+    return ((weekday + 1) % 7) + 1
+
+
+print(parse_chinese_numbers('让我们在下午5点采摘披萨，但是您会选择什么呢：10月15日还是11月18日？'))
 #
 #
 # def boson_analy(pattern, basetime):

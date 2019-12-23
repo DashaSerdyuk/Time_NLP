@@ -9,6 +9,7 @@ import regex as re
 import arrow
 import json
 import os
+import unidecode
 
 from StringPreHandler import StringPreHandler
 from TimePoint import TimePoint
@@ -117,13 +118,17 @@ class TimeNormalizer:
         else:
             if len(res) == 0:
                 dic['error'] = 'no time pattern could be extracted.'
-            elif len(res) == 1:
-                dic['type'] = 'timestamp'
-                dic['timestamp'] = res[0].time.format("YYYY-MM-DD HH:mm:ss")
+            # elif len(res) == 1:
+            #     dic['type'] = 'timestamp'
+            #     dic['timestamp'] = res[0].time.format("YYYY-MM-DD HH:mm:ss")
+            # else:
+            #     dic['type'] = 'timespan'
+            #     dic['timespan'] = [res[0].time.format("YYYY-MM-DD HH:mm:ss"), res[1].time.format("YYYY-MM-DD HH:mm:ss")]
             else:
-                dic['type'] = 'timespan'
-                dic['timespan'] = [res[0].time.format("YYYY-MM-DD HH:mm:ss"), res[1].time.format("YYYY-MM-DD HH:mm:ss")]
-        return json.dumps(dic)
+                dic['entities'] = []
+                for r in res:
+                    dic['entities'].append({'time': r.time.format("YYYY-MM-DD HH:mm:ss"), 'token': r.exp_time})
+        return json.dumps(dic, ensure_ascii=False)
 
     def __preHandling(self):
         """
